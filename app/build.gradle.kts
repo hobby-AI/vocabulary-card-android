@@ -21,6 +21,8 @@ android {
         }
     }
 
+    assetPacks.add(":media_assets")
+
     buildTypes {
         release {
             isMinifyEnabled = false

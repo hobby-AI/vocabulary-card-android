@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "VocabOfflineApp"
 include(":app")
+include(":media_assets")
