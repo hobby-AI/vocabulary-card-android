@@ -1,0 +1,15 @@
+*.zip
+.gradle
+.idea
+*.iml
+*.log
+*.tmp
+node_modules
+.kotlin
+build
+gradle
+*.aab
+*.jks
+.gradle/
+*.mp3
+*.mp4
