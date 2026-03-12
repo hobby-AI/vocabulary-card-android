@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Shuffle
@@ -91,7 +93,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun VocabApp(vm: VocabViewModel = viewModel()) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -101,6 +103,7 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
     var lessonMenuExpanded by remember { mutableStateOf(false) }
     var showLessonAudioPopup by remember { mutableStateOf(false) }
     var showLessonVideoPopup by remember { mutableStateOf(false) }
+    var isVideoExpanded by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -269,7 +272,17 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
                                         selected = revealedMode == mode,
                                         onClick = { revealedMode = mode },
                                         enabled = vm.promptMode != mode,
-                                        label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                        label = {
+                                            if (mode == PromptMode.SOUND) {
+                                                Icon(
+                                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                                    contentDescription = "Sound",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            } else {
+                                                Text(mode.name.lowercase().replaceFirstChar { it.uppercase() })
+                                            }
+                                        },
                                         modifier = Modifier.padding(horizontal = 4.dp)
                                     )
                                 }
@@ -291,55 +304,77 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
                 }
             }
 
-            // Choose Content / Settings Card (Moved below Exercise)
+            // Compressed Choose Content / Settings Card
             Card {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Choose content", style = MaterialTheme.typography.titleMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = vm.itemSetMode == ItemSetMode.VOCABULARY,
-                            onClick = { vm.updateItemSetMode(ItemSetMode.VOCABULARY) },
-                            label = { Text("Vocabulary") }
-                        )
-                        FilterChip(
-                            selected = vm.itemSetMode == ItemSetMode.PHRASES,
-                            onClick = { vm.updateItemSetMode(ItemSetMode.PHRASES) },
-                            label = { Text("Phrases") }
-                        )
-                    }
-
-                    Text("Prompt mode", style = MaterialTheme.typography.titleMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PromptMode.entries.forEach { mode ->
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Content Mode Row
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Content", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(64.dp))
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
-                                selected = vm.promptMode == mode,
-                                onClick = { vm.updatePromptMode(mode) },
-                                label = { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                                selected = vm.itemSetMode == ItemSetMode.VOCABULARY,
+                                onClick = { vm.updateItemSetMode(ItemSetMode.VOCABULARY) },
+                                label = { Text("Vocab", style = MaterialTheme.typography.labelMedium) }
+                            )
+                            FilterChip(
+                                selected = vm.itemSetMode == ItemSetMode.PHRASES,
+                                onClick = { vm.updateItemSetMode(ItemSetMode.PHRASES) },
+                                label = { Text("Phrases", style = MaterialTheme.typography.labelMedium) }
                             )
                         }
                     }
 
-                    Text("Filter", style = MaterialTheme.typography.titleMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = vm.filterMode == FilterMode.ALL,
-                            onClick = { vm.updateFilterMode(FilterMode.ALL) },
-                            label = { Text("All") }
-                        )
-                        FilterChip(
-                            selected = vm.filterMode == FilterMode.SAVED,
-                            onClick = { vm.updateFilterMode(FilterMode.SAVED) },
-                            label = { Text("Saved") }
-                        )
-                        AssistChip(
-                            onClick = { vm.shuffle() },
-                            label = { Text("Shuffle") },
-                            leadingIcon = { Icon(Icons.Default.Shuffle, contentDescription = null) }
-                        )
-                        AssistChip(
-                            onClick = { vm.resetSaved() },
-                            label = { Text("Reset") }
-                        )
+                    // Prompt Mode Row
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Prompt", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(64.dp))
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PromptMode.entries.forEach { mode ->
+                                FilterChip(
+                                    selected = vm.promptMode == mode,
+                                    onClick = { vm.updatePromptMode(mode) },
+                                    label = {
+                                        if (mode == PromptMode.SOUND) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.VolumeUp,
+                                                contentDescription = "Sound",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        } else {
+                                            Text(
+                                                mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Filter & Actions Row
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text("Filter", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(64.dp))
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = vm.filterMode == FilterMode.ALL,
+                                onClick = { vm.updateFilterMode(FilterMode.ALL) },
+                                label = { Text("All", style = MaterialTheme.typography.labelMedium) }
+                            )
+                            FilterChip(
+                                selected = vm.filterMode == FilterMode.SAVED,
+                                onClick = { vm.updateFilterMode(FilterMode.SAVED) },
+                                label = { Text("Saved", style = MaterialTheme.typography.labelMedium) }
+                            )
+                            AssistChip(
+                                onClick = { vm.shuffle() },
+                                label = { Text("Shuffle", style = MaterialTheme.typography.labelMedium) },
+                                leadingIcon = { Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            )
+                            AssistChip(
+                                onClick = { vm.resetSaved() },
+                                label = { Text("Reset", style = MaterialTheme.typography.labelMedium) }
+                            )
+                        }
                     }
                 }
             }
@@ -351,6 +386,7 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
         Dialog(onDismissRequest = {
             showLessonAudioPopup = false
             showLessonVideoPopup = false
+            isVideoExpanded = false
             lessonMediaPlayer.pause()
         }) {
             Card(
@@ -369,12 +405,23 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = title, style = MaterialTheme.typography.titleLarge)
-                        IconButton(onClick = {
-                            showLessonAudioPopup = false
-                            showLessonVideoPopup = false
-                            lessonMediaPlayer.pause()
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        Row {
+                            if (showLessonVideoPopup) {
+                                IconButton(onClick = { isVideoExpanded = !isVideoExpanded }) {
+                                    Icon(
+                                        if (isVideoExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                                        contentDescription = "Toggle expand"
+                                    )
+                                }
+                            }
+                            IconButton(onClick = {
+                                showLessonAudioPopup = false
+                                showLessonVideoPopup = false
+                                isVideoExpanded = false
+                                lessonMediaPlayer.pause()
+                            }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -383,13 +430,24 @@ fun VocabApp(vm: VocabViewModel = viewModel()) {
                             PlayerView(ctx).apply {
                                 player = lessonMediaPlayer
                                 useController = true
+                                if (showLessonAudioPopup) {
+                                    controllerShowTimeoutMs = 0
+                                    controllerHideOnTouch = false
+                                    showController()
+                                }
                             }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(if (showLessonVideoPopup) 200.dp else 100.dp)
+                            .height(
+                                when {
+                                    showLessonVideoPopup && isVideoExpanded -> 400.dp
+                                    showLessonVideoPopup -> 200.dp
+                                    else -> 95.dp
+                                }
+                            )
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color.Black)
+                            .background(if (showLessonVideoPopup) Color.Black else MaterialTheme.colorScheme.surfaceVariant)
                     )
                 }
             }
